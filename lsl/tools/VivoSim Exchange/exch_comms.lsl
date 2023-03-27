@@ -2,7 +2,7 @@
 //  VivoSim Exchange - Handles communication with Vivosim server
 //  exch_comms.lsl
 // --------------------------------------------------------------
-// VERSION = 6.00	 13 February 2023
+// VERSION = 6.01	 27 February 2023
 
 integer DEBUGMODE = FALSE;
 debug(string text)
@@ -27,7 +27,7 @@ string  rating;                             // Region rating is PG, MATURE, ADUL
 integer avatars;                            // Number of avatars in region on last scan
 integer minsSinceLast = -1;
 string  status = "";
-integer refreshInterval = 50;               // Keep this around 60 seconds or more unless testing             
+integer refreshInterval = 50;               // Keep this around 60 seconds or more unless testing
 
 // These are passed from main script. They are values read from config notecard
 string  exchangeType = "grocery";           // TYPE=Grocery         can be 'grocery', 'bazaar', 'hardware' or 'concessions'   [bazaar is grocery minus concessions items]
@@ -73,7 +73,7 @@ list exchData = [];
 
 postMessage(string msg)
 {
-    debug("postMessage: " + msg +" to:"+BASEURL); 
+    debug("postMessage: " + msg +" to:"+BASEURL);
     if ( (allowRegister == TRUE) && (msg != "") )
     {
         if (BASEURL != "") farmHTTP = llHTTPRequest(BASEURL, [HTTP_METHOD,"POST",HTTP_MIMETYPE,"application/x-www-form-urlencoded"], msg);
@@ -103,9 +103,9 @@ checkBeacon()
         }
     }
     // If we don't yet have all data, re-request it
-    if (joomlaID == 0 || exchangeID == "*" || farmName == "*" || VERSION == 0) 
+    if (joomlaID == 0 || exchangeID == "*" || farmName == "*" || VERSION == 0)
     {
-        llMessageLinked(LINK_SET, 1, "EXCH_RESEND", "");                
+        llMessageLinked(LINK_SET, 1, "EXCH_RESEND", "");
     }
     else
     {
@@ -116,7 +116,7 @@ checkBeacon()
             if (exchangeID != "*")
             {
                 avatars = nNew;
-                string exdata = "task=updtex&data1=" +(string)exchangeID +"&data2="; 
+                string exdata = "task=updtex&data1=" +(string)exchangeID +"&data2=";
                 exdata +=
                                 owner+"|"+
                                 farmName+"|"+
@@ -150,7 +150,7 @@ checkBeacon()
                 }
             }
         }
-        debug("checkBeacon - farmName:" + farmName + "  joomlaID:|" +(string)joomlaID + "|  exchangeID:" +exchangeID +"  Version:" +(string)VERSION); 
+        debug("checkBeacon - farmName:" + farmName + "  joomlaID:|" +(string)joomlaID + "|  exchangeID:" +exchangeID +"  Version:" +(string)VERSION);
     }
 }
 
@@ -170,7 +170,7 @@ default
         llPassTouches(1);
         regionName = llGetRegionName();
         slurl = osGetGridLoginURI();
-        position = llGetPos(); 
+        position = llGetPos();
         status = "init";
         // Request rating for this region
         ratingReqId = llRequestSimulatorData( llGetRegionName(), DATA_SIM_RATING );
@@ -199,7 +199,7 @@ default
 
         if (cmd == "CMD_INIT")
         {
-            // PASSWORD|VERSION|RSTATE|ExchangeID|joomlaID|BASEURL 
+            // PASSWORD|VERSION|RSTATE|ExchangeID|joomlaID|BASEURL
             PASSWORD   = llList2String(tk, 1);
             VERSION    = llList2Integer(tk, 2); // store in database as x10  i.e.  ver 5.5  would be stored as 55
             RSTATE     = llList2Integer(tk, 3);
@@ -230,7 +230,7 @@ default
         else if (cmd == "PURCHASE_UPDATE")
         {
             totalPurchased = llList2Integer(tk,1);
-            checkBeacon(); 
+            checkBeacon();
         }
         else if (cmd == "FARM_NAME")
         {
@@ -267,7 +267,7 @@ default
             if (cmd == "USERINFO")
             {
                 joomlaID = llList2Integer(tok, 1);
-            }     
+            }
             else
             {
               debug(" http_response unknown: "+llList2String(tok,1));

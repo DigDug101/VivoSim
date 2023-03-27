@@ -11,13 +11,13 @@
  *  Supports multilingual MOTD
 **/
 
-float   VERSION = 6.00;    // 21 March 2023
-integer RSTATE  = -1;      // RSTATE = 1 for release, 0 for beta, -1 for Release candidate
+float   VERSION = 6.01;    // 27 March 2023
+integer RSTATE  = 1;       // RSTATE = 1 for release, 0 for beta, -1 for Release candidate
 //
-integer DEBUGMODE = TRUE;
+integer DEBUGMODE = FALSE;
 debug(string text)
 {
-    if (DEBUGMODE == TRUE) llOwnerSay("DEBUG:" + llToUpper(llGetScriptName()) + "\n" + text);
+    if (DEBUGMODE == TRUE) llOwnerSay("DEBUG:" + llToUpper(llGetScriptName()) + "\n" + text +" STATUS: " +status);
 }
 //
 // Server URLs
@@ -181,6 +181,11 @@ string  farmDescription = "";
 string  profileCover;
 integer lastPoll;
 
+setMarket(string exchType)
+{
+	if (exchType == "bazaar") marketType = "market_bazaar.inf"; else if (exchType == "hardware") marketType = "market_hardware.inf"; else if (exchType == "concessions") marketType = "market_concessions.inf"; else if (exchType == "gorean") marketType = "market_gorean.inf"; else marketType = "market_grocery.inf";
+}
+
 loadConfig()
 {
     //sfp 'password' notecard
@@ -222,23 +227,32 @@ loadConfig()
                 else if (cmd == "FONT") fontName = val;
                 else if (cmd == "USE_HTTPS") useHTTPS = (integer)val;
                 else if (cmd == "USE_BETA") useBeta = (integer)val;
-                else if (cmd == "DEBUG") DEBUGMODE = (integer)val;
+                else if (cmd == "DEBUG")
+				{
+					// If script has it as true it overides config notecard setting
+					if (DEBUGMODE == FALSE) DEBUGMODE = (integer)val;
+				}
             }
         }
     }
-    if (exchangeType == "bazaar") marketType = "market_bazaar.inf"; else if (exchangeType == "hardware") marketType = "market_hardware.inf"; else if (exchangeType == "concessions") marketType = "market_concessions.inf"; else if (exchangeType == "gorean") marketType = "market_gorean.inf"; else marketType = "market_grocery.inf";
+
+	setMarket(exchangeType);
+
     // ===========================================================
     //  FOR THIS RELEASE ALWAYS SET TO FALSE AS NEEDS MORE WORK!
-    allowRegister = FALSE;
+	    allowRegister = FALSE;
     // ===========================================================
+
     // Load settings from description
     list desc = llParseStringKeepNulls(llGetObjectDesc(), [";"], []);
+
     if (llList2String(desc, 0) == "E")
     {
         accessMode = llList2Integer(desc, 1);
         languageCode = llList2String(desc, 2);
         farmName = llList2String(desc, 3);
         exchangeType = llList2String(desc, 4);
+		setMarket(exchangeType);
         opMode = llList2Integer(desc, 5);
         useDarkMode = llList2Integer(desc, 6);
     }
@@ -393,12 +407,13 @@ loadLanguage(string langCode)
 saveToDesc()
 {
     llSetObjectDesc("E;" +(string)accessMode+";" +languageCode + ";" +farmName +";" +exchangeType +";" +(string)opMode +";" +(string)useDarkMode);
-    if (exchangeType == "grocery") marketType = "market_grocery.inf"; else if (exchangeType == "hardware") marketType = "market_hardware.inf"; else if (exchangeType == "concessions") marketType = "market_concessions.inf"; else marketType = "market_bazaar.inf";
+	setMarket(exchangeType);
 }
 
 loadStock()
 {
     stockItems = [];
+
     if (llGetInventoryType(stockNC) == INVENTORY_NOTECARD)
     {
         list lines = llParseStringKeepNulls(osGetNotecard(stockNC), ["\n"], []);
@@ -564,6 +579,7 @@ messageScreen(string msg)
             xpos = 256 - ((integer) Extents.x >> 1);                // Center the text horizontally
             CommandList = osMovePen(CommandList, xpos, 430);        // Position the text
             CommandList = osDrawText(CommandList, msg);             // Place the text
+
             // show exchange type
             CommandList = osSetFontSize(CommandList, 7);
             CommandList = osSetPenColor(CommandList, "black");
@@ -571,8 +587,9 @@ messageScreen(string msg)
             else if (exchangeType == "hardware") tmpStr =  TXT_HARDWARE;
             else if (exchangeType == "concessions") tmpStr = TXT_CONCESSIONS;
             else if (exchangeType == "bazaar") tmpStr =  TXT_BAZAAR;
+
             // Show version info
-            tmpStr += " - V" +qsFixPrecision(VERSION, 1);
+            tmpStr += " - V" +qsFixPrecision(VERSION, 2);
             if (RSTATE == 0) tmpStr+= " Beta"; else if (RSTATE == -1) tmpStr+= " RC";
             if (outOfDate == TRUE)
             {
@@ -588,6 +605,7 @@ messageScreen(string msg)
             CommandList = osMovePen(CommandList, 100,150);
             CommandList = osDrawText(CommandList, TXT_OFFLINE);
         }
+
         osSetDynamicTextureDataBlendFace("", "vector", CommandList, body, FALSE, 1, 0, 255, FACE);
     }
 }
@@ -595,6 +613,7 @@ messageScreen(string msg)
 showPrices()
 {
     screenState = "showPrices";
+
     if (useScreen == TRUE)
     {
         if (getLinkNum("secondary_display") != -1) llSetLinkAlpha(getLinkNum("secondary_display"), 0.0, ALL_SIDES);
@@ -605,6 +624,7 @@ showPrices()
             if (screenListOffset == 0) llSetLinkPrimitiveParams(getLinkNum("buttons_display"), [PRIM_COLOR, 2, <0.0, 0.0, 0.0>, 0.0 ]);
             if (screenListOffset+screenCapacity > llGetListLength(items)) llSetLinkPrimitiveParams(getLinkNum("buttons_display"), [PRIM_COLOR, 4, <0.0, 0.0, 0.0>, 0.0 ]);
         }
+
         integer i;
         integer j = llGetListLength(items);
         integer k;
@@ -615,23 +635,29 @@ showPrices()
         string CommandList = "";  // Storage for our drawing commands
         string statusColour;
         llSetTexture("blank", FACE);
+
         // Set the font to use
         CommandList = osSetFontName(CommandList, fontName);
+
         // Fill in background
         if (useDarkMode == TRUE) CommandList = osSetPenColor( CommandList, "black" ); else CommandList = osSetPenColor( CommandList, "cornsilk" );
         //
         CommandList = osMovePen( CommandList, 10, 10 );
         CommandList = osDrawFilledRectangle( CommandList, 490, 490 );
+
         // Show the Exchange logo
         CommandList = osMovePen(CommandList, 28, 8);                     // Upper left corner
         CommandList = osDrawImage(CommandList, 230, 40, BASEIMAGEURL );  // Display small logo
+
         // show exchange type
         CommandList = osSetFontSize(CommandList, 10);
+
         if (useDarkMode == TRUE) CommandList = osSetPenColor(CommandList, "cornsilk"); else CommandList = osSetPenColor(CommandList, "slateblue");
              if (exchangeType == "grocery")   tmpStr =  TXT_GROCERY;
         else if (exchangeType == "hardware") tmpStr =  TXT_HARDWARE;
         else if (exchangeType == "concessions") tmpStr = TXT_CONCESSIONS;
         else if (exchangeType == "bazaar") tmpStr =  TXT_BAZAAR;
+
          // Show version info
         tmpStr += " (V" +qsFixPrecision(VERSION, 1);
         if (RSTATE == 0) tmpStr+= " Beta"; else if (RSTATE == -1) tmpStr+= " RC";
@@ -645,14 +671,18 @@ showPrices()
         CommandList = osDrawRectangle(CommandList, 505,505);
         CommandList = osMovePen(CommandList, 15, 70);
         CommandList = osSetFontSize(CommandList, 10);
+
         if (quinActive == TRUE)
         {
-        if (useDarkMode == TRUE) CommandList = osSetPenColor(CommandList, "cornsilk"); else CommandList = osSetPenColor(CommandList, "DarkBlue");
+        	if (useDarkMode == TRUE) CommandList = osSetPenColor(CommandList, "cornsilk"); else CommandList = osSetPenColor(CommandList, "DarkBlue");
+
             string product;
             string what;
+
             for( i = 0; i < screenCapacity; i = i+2 )
             {
                 product =  llList2String(items, i+screenListOffset);
+
                 if (product != "")
                 {
                     what = "SF " + product;
@@ -685,11 +715,14 @@ showPrices()
                 {
                     outputTextL = outputTextL + "-";
                 }
+
                 k = i + 1;
                 product =  llList2String(items, k+screenListOffset);
+
                 if (product != "")
                 {
                     what = "SF " + product;
+
                     if (llGetInventoryType(what) != INVENTORY_OBJECT)
                     {
                         product = "x ";
@@ -776,7 +809,7 @@ activate()
     postMessage(msg);
     userToPay = llGetOwner();
     psys(userToPay);
-    llMessageLinked(LINK_SET, 1, "CMD_INIT|" +PASSWORD +"|" +(string)((integer)(VERSION*10)) +"|" +(string)RSTATE +"|" +ExchangeID +"|" +(string)joomlaID +"|" +BASEURL +"|" +(string)useBeta + "|" + fontName, "");
+    llMessageLinked(LINK_SET, 1, "CMD_INIT|" +PASSWORD +"|" +(string)((integer)(VERSION*100)) +"|" +(string)RSTATE +"|" +ExchangeID +"|" +(string)joomlaID +"|" +BASEURL +"|" +(string)useBeta + "|" + fontName, "");
     llSetTimerEvent(60);
 }
 
@@ -877,6 +910,7 @@ incSoldTally()
     integer i;
     integer count;
     integer day = llList2Integer(llParseString2List(llGetDate(), ["-"], []), 2);
+
     if (day == lastDay)
     {
         // still same day so add to sales for today
@@ -888,19 +922,24 @@ incSoldTally()
     {
         // new day so update 'lastDay' and record as a new days sales
         lastDay = day;
+
         // Check if a new month, if so clear all values
         if (day == 1) soldTally = [];
+
         // Record first sale of the day
         soldTally = llListReplaceList(soldTally, [1], day, day);
     }
+
     totalSold = 0;
     count = llGetListLength(soldTally);
     for (i = 0; i < count; i++)
     {
         totalSold += llList2Integer(soldTally, i);
     }
+
     // update notecard
     saveTally();
+
     // Now send a message to the comms script so database on server gets updated
     llMessageLinked(LINK_SET, 1, "SOLD_UPDATE|" + (string)totalSold +"|", "");
     debug("=== incSoldTally called ===\n Total sold=" +(string)totalSold);
@@ -969,10 +1008,12 @@ loadTally()
 
 broadcast_data()
 {
-    // Send data to comms script
-    string cmdList = "EXCH_VALUES|" +(string)((integer)(VERSION*10)) +"|" +(string)RSTATE +"|" +ExchangeID +"|" +exchangeType +"|" +(string)offset +"|" +(string)allowRegister +"|" +farmName +"|" +(string)accessMode +"|" +(string)opMode +"|" +joomlaID +"|" +farmDescription;
-    llMessageLinked(LINK_SET, 1, cmdList, "");
-    postMessage("task=chkuser&data1=" + (string)owner);
+	/*
+     // Send data to comms script
+     string cmdList = "EXCH_VALUES|" +(string)((integer)(VERSION*100)) +"|" +(string)RSTATE +"|" +ExchangeID +"|" +exchangeType +"|" +(string)offset +"|" +(string)allowRegister +"|" +farmName +"|" +(string)accessMode +"|" +(string)opMode +"|" +joomlaID +"|" +farmDescription;
+     llMessageLinked(LINK_SET, 1, cmdList, "");
+     postMessage("task=chkuser&data1=" + (string)owner);
+	*/
 }
 
 idleScreen(string msg)
@@ -1121,7 +1162,6 @@ default
             ownKey = llGetKey();
             llMessageLinked(LINK_SET, 1, "LANG_TOPTEN|" +TXT_NAME +"|" +TXT_SCORE +"|" +TXT_TOPTEN +"|" +languageCode, "");
             llMessageLinked(LINK_SET, 1, "LANG_ACTIVITY|"  +TXT_RECENT_ACTIVITY +"|" +TXT_ACTIVITY +"|" +TXT_RANK, "");
-            broadcast_data();
             setImage();
             modeNames = [TXT_EVERYONE, TXT_GROUP, TXT_LOCAL];
             idleScreen(TXT_CLICK_FOR_MENU);
@@ -1141,7 +1181,7 @@ default
             loadLanguage(languageCode);
             loadStock();
             setImage();
-            llMessageLinked(LINK_SET, 1, "CMD_INIT|" +PASSWORD +"|" +(string)((integer)(VERSION*10)) +"|" +(string)RSTATE +"|" +ExchangeID +"|" +(string)joomlaID +"|" +BASEURL +"|" +(string)useBeta + "|" + fontName, "");
+            llMessageLinked(LINK_SET, 1, "CMD_INIT|" +PASSWORD +"|" +(string)((integer)(VERSION*100)) +"|" +(string)RSTATE +"|" +ExchangeID +"|" +(string)joomlaID +"|" +BASEURL +"|" +(string)useBeta + "|" + fontName, "");
         }
 
         if (change & CHANGED_REGION_START)
@@ -1172,7 +1212,7 @@ default
         else if ((llGetUnixTime() -lastPoll) > 900)  // Check around every 15 minutes if profile cover changed
         {
             lastPoll = llGetUnixTime();
-            postMessage("task=imageuser&data1=" +owner); llMessageLinked(LINK_SET, 1, "CMD_INIT|" +PASSWORD +"|" +(string)((integer)(VERSION*10)) +"|" +(string)RSTATE +"|" +ExchangeID +"|" +(string)joomlaID +"|" +BASEURL +"|" +(string)useBeta + "|" + fontName, "");
+            postMessage("task=imageuser&data1=" +owner); llMessageLinked(LINK_SET, 1, "CMD_INIT|" +PASSWORD +"|" +(string)((integer)(VERSION*100)) +"|" +(string)RSTATE +"|" +ExchangeID +"|" +(string)joomlaID +"|" +BASEURL +"|" +(string)useBeta + "|" + fontName, "");
     llSetTimerEvent(60);
         }
         else
@@ -1184,7 +1224,7 @@ default
             if (joomlaID == 0)
             {
                 postMessage("task=chkuser&data1=" + (string)owner);
-                llOwnerSay("Asking for joomla user info...");
+                debug("Asking for website user info...");
             }
         }
     }
@@ -1201,11 +1241,12 @@ default
             debug(TXT_BAD_PASSWORD + " : " + cmd);
             return;
         }
+
         //for updates
         if (cmd == "VERSION-CHECK")
         {
             string answer = "VERSION-REPLY|" + PASSWORD + "|";
-            answer += (string)llGetKey() + "|" + (string)((integer)(VERSION*10)) + "|";
+            answer += (string)llGetKey() + "|" + (string)((integer)(VERSION*100)) + "|";
             integer len = llGetInventoryNumber(INVENTORY_OBJECT);
             while (len--)
             {
@@ -1259,6 +1300,7 @@ default
         }
         else
         {
+			// A product has responded to DIE so now credit user
             for (i=0; i < llGetListLength(items); i++)
             {
                 if (llToUpper(llList2String(items,i)) == cmd)
@@ -1361,30 +1403,35 @@ default
             else if (m == TXT_GROCERY)
             {
                 exchangeType = "grocery";
+				setMarket(exchangeType);
                 idleScreen(TXT_READY +"...");
                 llOwnerSay(TXT_EX_TYPE + ": " + TXT_GROCERY);
             }
             else if (m == TXT_HARDWARE)
             {
                 exchangeType = "hardware";
+				setMarket(exchangeType);
                 idleScreen(TXT_READY +"...");
                 llOwnerSay(TXT_EX_TYPE + ": " + TXT_HARDWARE);
             }
             else if (m == TXT_CONCESSIONS)
             {
                 exchangeType = "concessions";
+				setMarket(exchangeType);
                 idleScreen(TXT_READY +"...");
                 llOwnerSay(TXT_EX_TYPE + ": " + TXT_CONCESSIONS);
             }
             else if (m == TXT_BAZAAR)
             {
                 exchangeType = "bazaar";
+				setMarket(exchangeType);
                 idleScreen(TXT_READY +"...");
                 llOwnerSay(TXT_EX_TYPE + ": " + TXT_BAZAAR);
             }
             else if (m == TXT_GOREAN)
             {
                 exchangeType = "gorean";
+				setMarket(exchangeType);
                 idleScreen(TXT_READY +"...");
                 llOwnerSay(TXT_EX_TYPE + ": " + TXT_GOREAN);
             }
@@ -1509,6 +1556,7 @@ default
                 integer idx = llListFindList(items, m);
                 itemPrice = llList2String(prices, idx);
                 lookingFor = m;
+
                 // Check they have enough points
                 status = "balCheck";
                 postMessage("task=coins&data1=" + (string)userToPay);
@@ -1611,25 +1659,30 @@ default
             }
             return;
         }
+
         //get first product that isn't already selected and has enough percentage
         integer c;
         key ready_obj = NULL_KEY;
+
         for (c = 0; ready_obj == NULL_KEY && c < n; c++)
         {
             key obj = llDetectedKey(c);
             list stats = llParseString2List(llList2String(llGetObjectDetails(obj,[OBJECT_DESC]),0), [";"], []);
             integer have_percent = llList2Integer(stats, 1);
+
             // have_percent == 0 for backwards compatibility with old items
             if (llListFindList(sellItems, [obj]) == -1 && (have_percent == 100 || have_percent == 0))
             {
                 ready_obj = llDetectedKey(c);
             }
         }
+
         if (ready_obj == NULL_KEY)
         {
             llRegionSayTo(userToPay, 0, lookingFor + " " + TXT_NOT_FOUND100);
             return;
         }
+
         sellItems += [ready_obj];
         llRegionSayTo(userToPay, 0, TXT_FOUND +"  " +lookingFor + ", " + TXT_EMPTYING);
         messageObj(ready_obj, "DIE|"+llGetKey());
@@ -1696,7 +1749,7 @@ default
         else if (cmd == "VERINFO")
         {
             activeVer = num;
-            integer vers = llRound(VERSION * 10);
+            integer vers = llRound(VERSION * 100);
             if (activeVer > vers) outOfDate = TRUE; else outOfDate = FALSE;
         }
         else if (cmd == "EXCH_RESEND")
@@ -1740,6 +1793,7 @@ default
     http_response(key request_id, integer HStatus, list metadata, string body)
     {
         debug("http_response: " +"  body= "+body);
+
         if (request_id == farmHTTP)
         {
             llSetColor(WHITE, 4);
@@ -1752,7 +1806,7 @@ default
                 quinActive = TRUE;
                 llSetLinkColor(LINK_SET, <1,1,1>, FACE);
                 idleScreen(TXT_CLICK_FOR_MENU);
-                llMessageLinked(LINK_SET, 1, "CMD_INIT|" +PASSWORD +"|" +(string)((integer)(VERSION*10)) +"|" +(string)RSTATE +"|" +ExchangeID +"|" +(string)joomlaID +"|" +BASEURL +"|" +(string)useBeta, "");
+                llMessageLinked(LINK_SET, 1, "CMD_INIT|" +PASSWORD +"|" +(string)((integer)(VERSION*100)) +"|" +(string)RSTATE +"|" +ExchangeID +"|" +(string)joomlaID +"|" +BASEURL +"|" +(string)useBeta, "");
                 llSetText("", ZERO_VECTOR, 0.0);
                 llSleep(2.0);
                 if (farmName == "*")
@@ -1799,11 +1853,13 @@ default
                     prices = [];
                     integer i;
                     integer j = llGetListLength(data);
+
                     for( i = 0; i < j; i = i+2 )
                     {
                         items += llList2String(data, i);
                         prices += llList2Integer(data, i+1);
                     }
+
                     if (status == "priceReq")
                     {
                         status = "";
@@ -1815,8 +1871,10 @@ default
                         {
                             list newItems = [];
                             list newPrices = [];
+
                             // take out items not in stock
                             integer count = llGetListLength(items);
+
                             for (i=0; i < count; i++)
                             {
                                 if (llListFindList(stockItems, ["SF " +llList2String(items, i)]) != -1)
@@ -1826,12 +1884,16 @@ default
                                 }
                             }
                             items = [] + newItems;
-    // Check if there is an ID for this Exchang
+    							// Check if there is an ID for this Exchang
                             prices = [] + newPrices;
                         }
                         startOffset = 0;
                         multiPageMenu(userToPay, TXT_BUY, items);
                     }
+					else if (status == "SellGoodsRepeat")
+					{
+
+					}
                     else
                     {
                         startOffset = 0;
@@ -1865,7 +1927,9 @@ default
                         items = [];
                         checkListen(TRUE);
                         startListen();
-                        status = "SellGoodsRepeat";
+
+                        status = "SellGoods";
+						//status = "SellGoodsRepeat";
                         postMessage("task=getmenu&data1=" + (string)userToPay +"&data2=" +marketType);
 
                     }
@@ -1879,13 +1943,18 @@ default
                         llRegionSayTo(userToPay, 0, TXT_GIVE_PURCHASE + " " + lookingFor + ".\n" + TXT_CHARGED + " " + itemPrice + " " + TXT_COINS);
                         llPlaySound("ching", 1.0);
                         status = "";
+
                         if (opMode == 0)
                         {
                             saveStock(what, DEBIT);
                             setImage();
                         }
+
                         llRegionSay(FARM_CHANNEL, "COINCHK|" +PASSWORD +"|" +(string)userToPay);
                         incSoldTally();
+						status = "BuyGoods";
+
+						postMessage("task=getmenu&data1=" + (string)userToPay +"&data2=" +marketType);
                     }
                 }
             }
@@ -1909,6 +1978,7 @@ default
                         tmpStr = TXT_YOU_HAVE +" " +(string)llList2Integer(tok,1) + " "+TXT_POINTS + "\n" + TXT_RANK + ": " +llList2String(rankList, 3);
                         llMessageLinked(LINK_SET, 1, "CMD_SHOW_ACTIVITY|" +rankImage +"|" +userRank , userToPay);
                     }
+
                     llRegionSayTo(userToPay, 0, tmpStr);
                 }
                 else if (status == "coinsQuery")
@@ -1921,12 +1991,14 @@ default
                     {
                         tmpStr = TXT_YOU_HAVE +" " +(string)llList2Integer(tok,1) +" " +TXT_COIN_SYMBOL;
                     }
+
                     llRegionSayTo(userToPay, 0, tmpStr);
                 }
                 else if (status == "balCheck")
                 {
                     integer pointsBal = llList2Integer(tok,1);
                     integer cost = (integer)itemPrice;
+
                     if ( (pointsBal - cost)  < 0)
                     {
                         llRegionSayTo(userToPay, 0, TXT_INSUFFICIENT_POINTS);
@@ -1934,6 +2006,7 @@ default
                     else
                     {
                         string what = "SF " + lookingFor;
+
                         if (llGetInventoryType(what) != INVENTORY_OBJECT)
                         {
                             llRegionSayTo(userToPay, 0, TXT_NO_STOCK +" " +lookingFor +"\n" +TXT_CHECKING);

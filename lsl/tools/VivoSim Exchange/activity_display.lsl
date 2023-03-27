@@ -3,7 +3,7 @@
 //  activity_display.lsl
 // -------------------------------------------
 
-float VERSION = 6.00;		// 17 February 2023
+float VERSION = 6.01;		// 27 February 2023
 
 integer DEBUGMODE = FALSE;
 debug(string text)
@@ -58,7 +58,7 @@ showActivity(list activity)
     CommandList = osDrawText(CommandList, txt_activity);
     // Draw horizontal seperator line
     CommandList = osSetPenSize(CommandList, 3);
-    CommandList = osDrawLine(CommandList, 40, 150, 990, 150);	
+    CommandList = osDrawLine(CommandList, 40, 150, 990, 150);
     // Show their ranking info
     CommandList = osMovePen(CommandList, 75, 925);
 	CommandList = osSetFontSize(CommandList, 30);
@@ -67,7 +67,7 @@ showActivity(list activity)
     // Show their ranking image on lower left
     CommandList = osMovePen(CommandList, 50, 800);
     CommandList = osDrawImage(CommandList, 350, 100, rankImage);
-    // Display table 
+    // Display table
 	CommandList = osSetFontSize(CommandList, 22);
 	CommandList = osSetPenColor(CommandList, "oldlace");
     integer offset = 0;
@@ -79,8 +79,8 @@ showActivity(list activity)
         for (i=0; i < count; i=i+1)
         {
             // {"title":"Hello there, 1, 2, 3 Testing!","content":""}
-            CommandList = osMovePen(CommandList, 45, (165 + offset));		
-            tmpStr = llJsonGetValue(llList2String(activity, i), ["content"]);				
+            CommandList = osMovePen(CommandList, 45, (165 + offset));
+            tmpStr = llJsonGetValue(llList2String(activity, i), ["content"]);
             if (tmpStr == "")
 			{
 				tmpStr = llJsonGetValue(llList2String(activity, i), ["title"]);
@@ -91,7 +91,7 @@ showActivity(list activity)
         }
     }
     else
-    {		
+    {
         CommandList = osMovePen(CommandList, 100, (165 + offset));
         tmpStr = "- - - - - - -";
         CommandList = osDrawText(CommandList, llGetSubString(tmpStr,0, 55));
@@ -104,8 +104,8 @@ showActivity(list activity)
 
 postMessage(string msg)
 {
-    debug("postMessage: " + msg +" to:"+BASEURL);    
-    if (BASEURL != "") farmHTTP = llHTTPRequest(BASEURL, [HTTP_METHOD,"POST",HTTP_MIMETYPE,"application/x-www-form-urlencoded", HTTP_BODY_MAXLENGTH, 16384], msg);                       
+    debug("postMessage: " + msg +" to:"+BASEURL);
+    if (BASEURL != "") farmHTTP = llHTTPRequest(BASEURL, [HTTP_METHOD,"POST",HTTP_MIMETYPE,"application/x-www-form-urlencoded", HTTP_BODY_MAXLENGTH, 16384], msg);
 }
 
 
@@ -151,7 +151,7 @@ default
                 // PASSWORD|VERSION|RSTATE|ExchangeID|joomlaID|BASEURL|useBeta|fontName
                 PASSWORD = llList2String(tk, 1);
                 VERSION  = llList2Integer(tk, 2);
-                VERSION  = (VERSION/10); 
+                VERSION  = (VERSION/100);
                 BASEURL  = llList2String(tk, 6);
                 useBeta  = llList2Integer(tk, 7);
                 fontName = llList2String(tk, 8);
@@ -168,7 +168,7 @@ default
         }
         else if (cmd == "CMD_SHOW_ACTIVITY")
         {
-            rankImage = llList2String(tk,1);                
+            rankImage = llList2String(tk,1);
             rankTitle = llList2String(tk,2);
             postMessage("task=recentactivity&data1=" + (string)id);
         }
@@ -194,7 +194,7 @@ default
             if (cmd == "ACTIVITY")
             {
                 if (llList2Integer(tok, 1) == 0)
-                {                
+                {
                     llMessageLinked(LINK_SET, 0, "NO_ACTIVITY", "");
                     showActivity([]);
                     llSetTimerEvent(0);
@@ -232,7 +232,7 @@ default
         if (cmd == "VERSION-CHECK")
         {
             string answer = "VERSION-REPLY|" + PASSWORD + "|";
-            answer += (string)llGetKey() + "|" + (string)((integer)(VERSION*10)) + "|";
+            answer += (string)llGetKey() + "|" + (string)((integer)(VERSION*100)) + "|";
             integer len = llGetInventoryNumber(INVENTORY_OBJECT);
             while (len--)
             {

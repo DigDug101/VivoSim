@@ -3,7 +3,7 @@
 //  leaderboard_display.lsl
 // ----------------------------------------
 
-float VERSION = 6.00;	//  7 March 2023
+float VERSION = 6.01;	// 27 March 2023
 
 integer DEBUGMODE = FALSE;
 debug(string text)
@@ -167,7 +167,7 @@ default
 				// PASSWORD|VERSION|RSTATE|ExchangeID|joomlaID|BASEURL|useBeta|fontName
 				PASSWORD = llList2String(tk, 1);
 				VERSION  = llList2Integer(tk, 2);
-				VERSION  = (VERSION/10); 
+				VERSION  = (VERSION/100);
 				BASEURL  = llList2String(tk, 6);
 				useBeta  = llList2Integer(tk, 7);
 				if (llList2String(tk, 8) != "") fontName = llList2String(tk, 8);
@@ -219,7 +219,7 @@ default
 
 			if (cmd == "TOPTEN")
 			{
-				llMessageLinked(LINK_SET, 1, "TOPTEN_OK", "");	
+				llMessageLinked(LINK_SET, 1, "TOPTEN_OK", "");
                 string steamData = llList2String(tok, 1);
 				list streamValues = llParseStringKeepNulls(steamData, ["|"], []);
 				showTopTen(streamValues);
@@ -234,9 +234,9 @@ default
 				llSetTimerEvent(0);
 			}
 			else if (cmd = "VEREX")
-			{             
+			{
 				// array('VEREX' => $verExch, 'MOTD' => trim($motd));
-				llMessageLinked(LINK_SET, llList2Integer(tok, 1), "VERINFO|", ""); 
+				llMessageLinked(LINK_SET, llList2Integer(tok, 1), "VERINFO|", "");
 				// Create list of the language variations of MOTD
 				motdList = llParseStringKeepNulls(llList2String(tok, 3), ["\n", "="], []);
 				showMOTD();
@@ -262,7 +262,7 @@ default
 		if (cmd == "VERSION-CHECK")
 		{
 			string answer = "VERSION-REPLY|" + PASSWORD + "|";
-			answer += (string)llGetKey() + "|" + (string)((integer)(VERSION*10)) + "|";
+			answer += (string)llGetKey() + "|" + (string)((integer)(VERSION*100)) + "|";
 			integer len = llGetInventoryNumber(INVENTORY_OBJECT);
 			while (len--)
 			{

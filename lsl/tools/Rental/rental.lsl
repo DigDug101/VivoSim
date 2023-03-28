@@ -7,7 +7,7 @@
  * Based on script by Ferd Frederix  https://www.outworldz.com/cgi/freescripts.plx?ID=594
  */
 
-float   VERSION = 3.00;     // 23 March 2023
+float   VERSION = 3.00;     // 24 March 2023
 
 integer DEBUGMODE = FALSE;   // Set this if you want to force startup in debug mode
 debug(string text)
@@ -44,9 +44,7 @@ string TXT_ADMIN_MESSAGE = "Click this rental box to activate after configuring 
 string TXT_BOX_DISABLED = "Rental box is disabled";
 string TXT_BOX_OFFLINE = "Rental box is offline";
 string TXT_ASK_LEASE = "Do you wish to claim this parcel?";
-
 string TXT_ASK_RENEW = "Do you wish to renew your claim now, at a cost of ";
-
 string TXT_AVAILABLE_FOR = "Available for";
 string TXT_CANT_RENEW = "Sorry, you can not renew yet.";
 string TXT_CLAIM_DUE = "Claim due for renewal soon.";
@@ -281,7 +279,7 @@ sendMessage(key id, string msg)
 {
     // Sends instant message and also message direct to VivoSim server as a private meesage for avatar
     llInstantMessage(id, msg);
-    postMessage("task=msgadd&data1=" +msg +"&data2=PRV" +(string)llGetUnixTime() +"&data3=" +(string)id);
+    postMessage("task=msgadd&data1=" +msg +"&data2=PRV" +(string)llGetUnixTime() +"&data3=" +(string)id +"&data4=" +(string)ownerID);
 }
 
 // Returns the SLURL for this rental box

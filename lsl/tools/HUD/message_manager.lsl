@@ -2,11 +2,11 @@
  * message_manager.lsl
  * Message manager for VivoSim
  * @version    6.00
- * @date    22 March 2023
+ * @date    24 March 2023
 */
 
 // Should we handle touch events or let another script do it?
-integer handleTouch = TRUE;
+integer handleTouch = FALSE;
 
 integer DEBUGMODE = FALSE;
 
@@ -66,7 +66,7 @@ integer timeOut = 45;        // How long before a timeout for dialog boxes/serve
 integer listener = -1;
 list    friendNames = [];
 list    friendIDs = [];
-list    messages = [];        // [msgID, timeStamp, Message...];
+list    messages = [];        // [msgID, timeStamp, Message, sender];
 list    btnList = [];
 string  infoText;
 string  sendTo;
@@ -130,6 +130,25 @@ multiPageMenu(key id, string message, list opt)
 	}
 }
 
+friendPicker(key id)
+{
+	listener = llListen(chan(llGetKey()), "", "", "");
+	status = "waitPrivateMessageUser";
+
+	integer i;
+	integer total = llGetListLength(friendNames);
+	btnList = [];
+	infoText = "";
+
+	for (i = 0; i < total; i++)
+	{
+		btnList += [(string)(i+1)];
+		infoText += (string)(i+1) + " " + llList2String(friendNames, i) +"\n";
+	}
+
+	multiPageMenu(id, infoText, btnList);
+}
+
 displayMessages(integer alsoSay)
 {
 	string output = "";
@@ -150,9 +169,9 @@ displayMessages(integer alsoSay)
 	if (count >1)
 	{
 		// Prepare output line as index count then time/date on one line then message on next
-		for (i=0; i < count; i += 3)
+		for (i=0; i < count; i += 4)
 		{
-			output += "(" +(string)(index) +") " +llList2String(messages, i+1) +("\n") +llList2String(messages, i+2) +"\n \n";
+			output += "(" +(string)(index) +") " +llList2String(messages, i+1) +("\n") +llList2String(messages, i+2) +"\n"   +llList2String(messages, i+3) +"\n \n";
 			index ++;
 		}
 		commandList = osSetPenColor(commandList, "Blue");
@@ -198,13 +217,15 @@ processMessages(list stream)
 	if (status == "listRequested") llOwnerSay(TXT_PROMPT);
 
 	list msgs = llJson2List(llList2String(stream, 3));
-	integer count = 2 * llList2Integer(stream, 1);
+	integer count = 3 * llList2Integer(stream, 1);
 
 	string  output = "";
 	string  timeStamp;
 	string  msgID;
+	string  sender;
 	integer grpID;
 	integer i;
+	integer index;
 	integer currentMessageCount = (llGetListLength(messages));
 	messages = [];
 
@@ -212,10 +233,21 @@ processMessages(list stream)
 	{
 		string prefix;
 
-		for (i=0; i < count; i += 2)
+		for (i=0; i < count; i += 3)
 		{
-			msgID = llList2String(msgs,i+1);
+			sender = llList2String(msgs, i+2);
+			index = llListFindList(friendIDs, sender);
 
+			if (index != -1)
+			{
+				sender = "-" +llList2String(friendNames, index) +"-";
+			}
+			else
+			{
+				sender = "-?-";
+			}
+
+			msgID = llList2String(msgs,i+1);
 			prefix = llGetSubString(msgID, 0, 2);
 
 			if (prefix == "PRV")
@@ -225,12 +257,7 @@ processMessages(list stream)
 			}
 			else if (prefix = "GRP")
 			{
-/*
-				// For group messages, the ID GRP plus 4 group num + UnixTime e.g.  GRP0012
-				grpID = llGetSubString(msgID, 3, -1);
-
-				timeStamp = osUnixTimeToTimestamp((integer)llGetSubString(msgID, 3, -1));
-*/
+				// TO DO
 			}
 			else
 			{
@@ -246,11 +273,11 @@ processMessages(list stream)
 
 			if (prefix == "PRV")
 			{
-				messages += [msgID, timeStamp, llList2String(msgs, i)];
+				messages += [msgID, timeStamp, llList2String(msgs, i), sender];
 			}
 			else
 			{
-				messages += [msgID, timeStamp, "* " +llList2String(msgs, i)];
+				messages += [msgID, timeStamp, "* " +llList2String(msgs, i), sender];
 			}
 		}
 
@@ -259,7 +286,7 @@ processMessages(list stream)
 		{
 			// Set the number of unread messages since last check
 			unread = (llGetListLength(messages) - currentMessageCount);
-			unread = unread / 3;
+			unread = unread / 4;
 
 			// Send a message to any attached prims that may support a new message indicator
 			llMessageLinked(LINK_SET, unread, "NEW_MESSAGE", "");
@@ -458,7 +485,8 @@ default
 			floatText(TXT_TALKING_TO_SERVER, PURPLE);
 			llSetTimerEvent(timeOut);
 			llListenRemove(listener);
-			postMessage("task=msglist&data1=" +(string)ownerID);
+			// Request list of private messages for this user
+			postMessage("task=msglist&data1=" +(string)ownerID +"&data2=PRV");
 		}
 	}
 
@@ -480,25 +508,20 @@ default
 		{
 			floatText(TXT_TALKING_TO_SERVER, PURPLE);
 			status = "listRequested";
-			postMessage("task=msglist&data1=" +(string)id);
+			// Request list of private messages for this user
+			postMessage("task=msglist&data1=" +(string)id +"&data2=PRV");
 		}
 		else if (m == TXT_SEND_PRIVATE_MESSAGE)
 		{
-			listener = llListen(chan(llGetKey()), "", "", "");
-			status = "waitPrivateMessageUser";
-
-			integer i;
-			integer total = llGetListLength(friendNames);
-			btnList = [];
-			infoText = "";
-
-			for (i = 0; i < total; i++)
+			if (llGetListLength(friendNames) == 0)
 			{
-				btnList += [(string)(i+1)];
-				infoText += (string)(i+1) + " " + llList2String(friendNames, i) +"\n";
+				status = "askFriendsToMsg";
+				postMessage("task=getfriends&data1=" +(string)ownerID);
 			}
-
-			multiPageMenu(id, infoText, btnList);
+			else
+			{
+				friendPicker(id);
+			}
 		}
 		else if (m == TXT_DELETE_MESSAGE)
 		{
@@ -554,7 +577,7 @@ default
 			if (status == "waitPrivateMessageUser")
 			{
 				// Our dialog starts the numbers at 1 so we need to take one off for finding in list
-				sendTo = llList2String(friendIDs, (integer)m);
+				sendTo = llList2String(friendIDs, (integer)(m)-1);
 				floatText(TXT_TALKING_TO_SERVER, PURPLE);
 				status = "waitPrivateMessageID";
 				postMessage("task=chkuser&data1=" +sendTo +"&data2=J");
@@ -563,7 +586,7 @@ default
 			{
 				floatText(TXT_TALKING_TO_SERVER, PURPLE);
 				status = "";
-				postMessage("task=msgadd&data1=" +m +"&data2=" +generateID(TRUE) +"&data3=" +sendTo);
+				postMessage("task=msgadd&data1=" +m +"&data2=" +generateID(TRUE) +"&data3=" +sendTo +"&data4=" +(string)ownerID);
 			}
 			else if (status == "waitID")
 			{
@@ -670,6 +693,8 @@ default
 								friendNames += [llList2String(friends, i+1)];
 							}
 						}
+
+						if ( status == "askFriendsToMsg") friendPicker(ownerID);
 					}
 					else
 					{

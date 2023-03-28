@@ -4,7 +4,7 @@
 // -------------------------------------------
 // 'led' style comms indicators for HUD indicator & weblink
 
-float version = 5.0;    // 21 September 2020
+float version = 6.01;    // 26 March 2023
 
 integer faceIndicator = 3;
 integer faceWeb  = 1;
@@ -85,12 +85,17 @@ default
         }
         else if (cmd == "STARTUP")
         {
-            llSetColor(faceIndicator_off, faceIndicator);
-            llSetColor(faceWeb_off, faceWeb);
-            webConnected = FALSE;
-            indyConnected = FALSE;
+            llSetColor(faceIndicator_on, faceIndicator);
+            llSetColor(faceWeb_on, faceWeb);
+            webConnected = TRUE;
+            indyConnected = TRUE;
 
         }
+		else if (cmd == "NOW_LINKED")
+		{
+			llSetColor(faceIndicator_off, faceIndicator);
+			llSetColor(faceWeb_off, faceWeb);
+		}
         else if (cmd == "DEBUG")
         {
             DEBUGMODE = llList2Integer(tk, 1);

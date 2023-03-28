@@ -1,7 +1,7 @@
 // weblinker.lsl
 // Allows user to link their existing avatar from any grid, to a VivoSim Joomla web account
 
-float version = 6.0;    // 22 March 2023
+float version = 6.01;    // 26 March 2023
 
 integer DEBUGMODE = FALSE;
 debug(string text)
@@ -155,6 +155,7 @@ default
 		else if (cmd == "CMD_LINKACC")
 		{
 			userToPay = id;
+			if (userToPay == NULL_KEY) userToPay = llGetOwner();
 			listener = llListen( dialogChannel, "", "", "");
 			llTextBox(id, "\n" +TXT_INSTRUCTION1+"\n \n" +TXT_INSTRUCTION2 +":", dialogChannel);
 		}

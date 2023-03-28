@@ -1,7 +1,8 @@
 // coin.lsl
 //
-float version = 6.0;   //  18 March 2023
-//
+
+float version = 6.0;   //  25 March 2023
+
 integer DEBUGMODE = FALSE;
 debug(string text)
 {
@@ -70,6 +71,11 @@ default
 			indicatorReset();
 		}
     }
+
+	touch_end( integer num_detected )
+	{
+		llMessageLinked(LINK_ALL_OTHERS, 0, "CMD_COIN_CHECK|*|" +(string)llGetOwner(), "");
+	}
 
     timer()
     {

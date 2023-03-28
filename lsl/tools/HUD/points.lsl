@@ -7,12 +7,13 @@
 // ---------------------------------------
 //  VivoSim HUD - Points system
 // ---------------------------------------
-float version = 6.0;   //  22 March 2023
+float version = 6.01;   //  28 March 2023
 
 integer DEBUGMODE = FALSE;
+
 debug(string text)
 {
-	if (DEBUGMODE == TRUE) llOwnerSay("DEBUG_" + llToUpper(llGetScriptName()) + " " + text);
+    if ((DEBUGMODE == TRUE) || (systemDebug == TRUE)) llOwnerSay("DB_" + llGetScriptName() + ": " + text);
 }
 
 //
@@ -46,7 +47,7 @@ string TXT_YOU_HAVE="You have";
 string TXT_RANK="Rank";
 string TXT_VIVOS="Vivos";
 string TXT_CLOSE="CLOSE";
-string TXT_BAD_PASSWORD="Comms error";
+string TXT_BAD_PASSWORD="Comms error, please try again in a few minutes";
 string TXT_SCANNING="Scanning";
 string TXT_FOOD="Food";
 string TXT_ERROR="Error";
@@ -59,14 +60,14 @@ integer FARM_CHANNEL = -911201;
 string PASSWORD="*";
 integer vivoActive;      // TRUE or FALSE for Active state
 string oswToken;
-key dlgUser;
-key userToPay;
+key ownerID;
 string lookingFor;
 string itemPrice;
 integer itemFound;
 integer pointsCount=0;
 integer startOffset=0;
 string status;
+integer systemDebug;
 list items = [];
 list prices = [];
 string tmpStr;
@@ -194,6 +195,7 @@ refresh()
 		llMessageLinked(LINK_SET, 0, "COMMS|WEB|0", "");
 		activate();
 	}
+
 	llListenRemove(listener);
 	listener = -1;
 }
@@ -215,7 +217,7 @@ activate()
 	// Talk to server and check comms is okay then activate
 	status = "activation";
 	postMessage("task=activq327&data1=1");
-	userToPay = llGetOwner();
+	ownerID = llGetOwner();
 	llSetTimerEvent(500);
 }
 
@@ -276,13 +278,11 @@ checkCoins(key userId)
 {
 	if (status != "initCoin") floatText(TXT_CHECKING_TOTAL+"\n ", PURPLE);
 	postMessage("task=coins&data1=" + (string)userId);
-	dlgUser = NULL_KEY;
 }
 
 checkXP(key userId)
 {
 	postMessage("task=getxp&data1=" + (string)userId);
-	dlgUser = NULL_KEY;
 }
 
 
@@ -298,6 +298,7 @@ default
 	{
 		chattyMode = TRUE;
 		listener=-1;
+		systemDebug = FALSE;
 		llMessageLinked(LINK_SET, 1, "LANG_MESSENGER|" +TXT_MESSAGES+"|" +TXT_CLOSE, "");
 	}
 
@@ -316,17 +317,18 @@ default
 		else if (cmd == "CMD_TEST")
 		{
 			postMessage("task=cmdtest&data1=" + (string)llGetOwner());
-			dlgUser = NULL_KEY;
 			llOwnerSay("CMD_TEST Sent:\ntask=cmdtest&data1=" +(string)llGetOwner());
 		}
 		else if (cmd == "CMD_DEBUG")
 		{
-			DEBUGMODE = llList2Integer(tok, 1);
+			systemDebug = llList2Integer(tok, 1);
 			refresh();
 			return;
 		}
 		else if (cmd == "CMD_POINTS")
 		{
+			if (id == NULL_KEY) id = ownerID;
+
 			list opts = [];
 
 			if ((vivoActive == TRUE) && (validated == TRUE))
@@ -348,7 +350,7 @@ default
 			opts += TXT_CLOSE;
 			refresh();
 			startListen();
-			llDialog(userToPay, "\n"+TXT_OPTION, opts, chan(llGetKey()));
+			llDialog(id, "\n"+TXT_OPTION, opts, chan(llGetKey()));
 			llSetTimerEvent(300);
 		}
 		else if (cmd == "CMD_COIN_CHECK")
@@ -358,12 +360,13 @@ default
 		else if (cmd == "NOW_LINKED")
 		{
 			status = "initCoin";
+			vivoActive == TRUE;
+			validated == TRUE;
 			checkCoins(id);
 		}
 		else if (cmd == "CMD_PLUSPNT")
 		{
-			postMessage("task=creditxp&data1=" + (string)userToPay + "&data2=Farm time" + "&data3=" +(string)num +"&data4=" +llList2String(tok, 1));
-			dlgUser = NULL_KEY;
+			postMessage("task=creditxp&data1=" + (string)id + "&data2=Farm time" + "&data3=" +(string)num +"&data4=" +llList2String(tok, 1));
 			status = "verifying_plusxp";
 		}
 		else if (cmd == "CMD_CHATTY")
@@ -390,7 +393,7 @@ default
 			tok = [];
 			tok = llJson2List(jsonTxt);
 			cmd = llList2String(tok, 0);
-			floatText(" ", WHITE);
+			floatText("  ", WHITE);
 
 			if (cmd == "DISABLE")
 			{
@@ -426,11 +429,11 @@ default
 				//  Communication established okay
 				vivoActive = TRUE;
 				llMessageLinked(LINK_SET, 0, "COMMS|WEB|1", "");
-				postMessage("task=getxp&data1=" + (string)userToPay);
+				postMessage("task=getxp&data1=" + (string)ownerID);
 			}
 			else if (cmd == "PLUSQP")
 			{
-				llRegionSayTo(userToPay, 0, TXT_CREDITED+" " + llList2String(tok,2) + " " + TXT_COINS);
+				llRegionSayTo(ownerID, 0, TXT_CREDITED+" " + llList2String(tok,2) + " " + TXT_COINS);
 				status = "";
 				llMessageLinked(LINK_SET, 0, "CMD_COINS|" + llList2String(tok,1), "");
 				llMessageLinked(LINK_SET, 0, "COMMS|WEB|1", "");
@@ -438,9 +441,9 @@ default
 			}
 			else if (cmd == "PLUSXP")
 			{
-				llRegionSayTo(userToPay, 0, TXT_CREDITED+" " + llList2String(tok,1) + " " + TXT_POINTS);
+				llRegionSayTo(ownerID, 0, TXT_CREDITED+" " + llList2String(tok,1) + " " + TXT_POINTS);
 				status = "";
-				checkXP(userToPay);
+				checkXP(ownerID);
 				llMessageLinked(LINK_SET, 0, "COMMS|WEB|1", "");
 				refresh();
 			}
@@ -507,7 +510,7 @@ default
 
 	timer()
 	{
-		floatText("", WHITE);
+		floatText(" ", WHITE);
 		refresh();
 		llSetTimerEvent(600);
 		checkListen();
@@ -536,7 +539,7 @@ default
 				lookingFor = llGetSubString(lookingFor, 3, llStringLength(lookingFor));
 				floatText(TXT_SENDING_ITEM +" " + lookingFor + "...", PURPLE);
 				psys(NULL_KEY);
-				postMessage("task=sold&data1=" + (string)userToPay + "&data2=Sold_  " + (lookingFor) + "&data3=" + itemPrice);
+				postMessage("task=sold&data1=" + (string)ownerID + "&data2=Sold_  " + (lookingFor) + "&data3=" + itemPrice);
 				status = "verifying-soldpnt";
 				return;
 			}
@@ -560,7 +563,7 @@ default
 		}
 		else if (m == TXT_LINK_ACCOUNT)
 		{
-			llMessageLinked(LINK_SET, 1, "CMD_LINKACC", userToPay);
+			llMessageLinked(LINK_SET, 1, "CMD_LINKACC", ownerID);
 			refresh();
 		}
 		else if (m == TXT_MY_COINS)
@@ -578,7 +581,6 @@ default
 			floatText(TXT_CHECKING_TOTAL+"\n ", PURPLE);
 			llSleep(0.5);
 			postMessage("task=getxp&data1=" + (string)id);
-			dlgUser = NULL_KEY;
 		}
 		else if (m == TXT_MY_COINS)
 		{
@@ -586,12 +588,10 @@ default
 			floatText(TXT_CHECKING_TOTAL+"\n ", PURPLE);
 			llSleep(0.5);
 			postMessage("task=coins&data1=" + (string)id);
-			dlgUser = NULL_KEY;
 		}
 		else if (m == TXT_MESSAGES)
 		{
 			llMessageLinked(LINK_SET, 1, "MSG_MENU", id);
-			dlgUser = NULL_KEY;
 		}
 		else if (status == "Sell")
 		{
@@ -602,7 +602,6 @@ default
 			{
 				floatText(TXT_SCANNING, PURPLE);
 				itemPrice  = llList2String(prices, idx);
-				userToPay = id;
 				lookingFor = "SF " + llList2String(items,idx);
 				llSensor(lookingFor, "",SCRIPTED,  10, PI);
 			}
@@ -619,7 +618,7 @@ default
 		itemFound=1;
 		tmpStr = TXT_FOOD +" "+llDetectedName(0)+", " + TXT_EMPTYING;
 		floatText(tmpStr, PURPLE);
-		llRegionSayTo(userToPay, 0, tmpStr);
+		llRegionSayTo(ownerID, 0, tmpStr);
 		osMessageObject(llDetectedKey(0), "DIE|"+llGetKey());
 	}
 

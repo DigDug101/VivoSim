@@ -5,16 +5,17 @@
 * Optional item to wear so others can see your status info
 */
 
-float VERSION = 6.00;        //  22 March 2023
+float VERSION = 6.01;        //  28 March 2023
 
 // Set the next depending upon if for avatar or baby
 string NAME = "VivoStatus-Ind";
 //string NAME = "BabyStatus-Ind";
 
 integer DEBUGMODE = FALSE;
+
 debug(string text)
 {
-	if (DEBUGMODE == TRUE) llOwnerSay("DEBUG:\n" + llToUpper(llGetScriptName()) + " " + text +"\n");
+    if ((DEBUGMODE == TRUE) || (systemDebug == TRUE)) llOwnerSay("DB_" + llGetScriptName() + ": " + text);
 }
 
 string  anxietySound = "anxiety";
@@ -33,6 +34,7 @@ key     ownerID;
 float   textAlpha = 1.0;
 integer dirty;
 integer visible;
+integer systemDebug;
 
 integer getLinkNum(string name)
 {
@@ -123,6 +125,7 @@ default
 		llStopSound();
 		llParticleSystem([]);
 		dirty = FALSE;
+		systemDebug = FALSE;
 		listenerFarm = llListen(FARM_CHANNEL, "", "", "");
 		llSetTimerEvent(30);
 	}
@@ -132,6 +135,7 @@ default
 		debug("listen: " + msg);
 		list tk = llParseStringKeepNulls(msg, ["|"], []);
 		string cmd = llList2String(tk, 0);
+
 		if ((cmd == "PING") && (llList2String(tk, 2) == "VSFHUD") && (llList2Key(tk, 3) == llGetOwner()))
 		{
 			if (hudKey != id)
@@ -157,6 +161,7 @@ default
 		list tk = llParseStringKeepNulls(msg, ["|"], []);
 		string cmd = llList2String(tk, 0);
 		debug("dataserver: " + msg + "  (cmd=" +cmd +")");
+
 		if (cmd == "INIT")
 		{
 			PASSWORD = llList2String(tk, 1);
@@ -189,14 +194,15 @@ default
 				}
 				else if (cmd == "BURSTING")
 				{
-llOwnerSay("BURSTING LEVEL=" +llList2String(tk,2));
-					if (llList2Integer(tk,2) > 2)
+					// Bladder is at, or greater than, 70%
+					if (llList2Integer(tk,2) < -9)
 					{
-						particles(llList2Integer(tk,2), llGetOwner(), mistTexture, anxietySound);
+						particles(llList2Integer(tk,2), llGetOwner(), mistTexture, toiletSound);
 					}
 					else
 					{
-						particles(llList2Integer(tk,2), llGetOwner(), mistTexture, toiletSound);
+						// Not yet really desperate, so just anxiety!
+						particles(llList2Integer(tk,2), llGetOwner(), mistTexture, anxietySound);
 					}
 				}
 				else if (cmd == "RELIEVED")
@@ -224,6 +230,15 @@ llOwnerSay("BURSTING LEVEL=" +llList2String(tk,2));
 				{
 					visible = llList2Integer(tk, 2);
 					setAlpha();
+				}
+				else if (cmd == "PAUSED")
+				{
+					if (llList2Integer(tk, 2) == 1)
+					{
+						llStopSound();
+						llParticleSystem([]);
+						showText("---", <0.5, 0.5, 1.0>);
+					}
 				}
 			}
 		}
